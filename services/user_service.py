@@ -15,7 +15,7 @@ class UserService:
         return self.user_repository.get_user_by_id(user_id)
 
     def create_user(self, user_data: UserDTO):
-        user = UserModel(
+        user = UserModel( 
             id=55, 
             name=user_data.name,
             email=user_data.email,
