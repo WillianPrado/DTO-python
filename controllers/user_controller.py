@@ -3,28 +3,26 @@
 from flask import Blueprint, jsonify, request
 from pydantic import ValidationError
 from services.user_service import UserService
-from models.user import UserModel
+from dtos.user_dto import UserDTO, UserResponseDTO
 
 user_controller = Blueprint('user_controller', __name__)
 user_service = UserService()
 
-@user_controller.route('/users', methods=['GET'])
-def get_users():
-    users = user_service.get_all_users()
-    return jsonify([{'id': user.id, 'name': user.name, 'email': user.email} for user in users])
-
 @user_controller.route('/users', methods=['POST'])
 def create_user():
     try:
-        # Tenta criar uma instância de UserModel, que valida os dados automaticamente
-        user_data = UserModel(**request.get_json())
+        data = request.get_json()
+        user_data = UserDTO(**data)  # Cria o DTO UserDTO com os dados da requisição
+        user = user_service.create_user(user_data)  # Passa o objeto UserDTO
         
-        # Se os dados forem válidos, cria o usuário
-        user = user_service.create_user(user_data.name, user_data.email)
+        # Criação do objeto UserResponseDTO e conversão para dicionário
+        response = UserResponseDTO(
+            id=user.id, 
+            name=user.name, 
+            email=user.email, 
+            address=user.address.dict() # Certifique-se de que address já esteja em formato de dicionário
+        ).dict()
         
-        # Retorna o usuário criado
-        return jsonify({'id': user.id, 'name': user.name, 'email': user.email}), 201
-
+        return jsonify(response), 201  # Retorna o JSON serializável
     except ValidationError as e:
-        # Retorna os erros de validação em caso de dados inválidos
-        return jsonify(e.errors()), 400
+        return jsonify({"error": e.errors()}), 400
