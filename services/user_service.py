@@ -1,7 +1,7 @@
 # services/user_service.py
 
 from repositories.user_repository import UserRepository
-from dtos.user_dto import UserDTO
+from dtos.user_dto import UserDTO, UserResponseDTO
 from models.user import UserModel
 
 class UserService:
@@ -22,5 +22,11 @@ class UserService:
             password=user_data.password,
             address=user_data.address.dict()  # Converte AddressDTO em dicionário
         )
-        # Aqui você salvaria `user` no repositório ou banco de dados
-        return user
+        
+        response = UserResponseDTO(
+            id=user.id, 
+            name=user.name, 
+            email=user.email, 
+            address=user.address.dict() # Certifique-se de que address já esteja em formato de dicionário
+        ).dict()
+        return response
