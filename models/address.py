@@ -1,8 +1,14 @@
 # models/address.py
-from pydantic import BaseModel, Field
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
 
-class Address(BaseModel):
-    street: str = Field(..., max_length=100, description="Rua do endereço")
-    city: str = Field(..., max_length=50, description="Cidade do endereço")
-    state: str = Field(..., max_length=50, description="Estado do endereço")
-    zip_code: str = Field(..., max_length=20, description="CEP do endereço")
+Base = declarative_base()
+
+class Address(Base):
+    __tablename__ = 'addresses'  # o nome da tabela no banco de dados
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    street = Column(String(255), nullable=True)
+    city = Column(String(255), nullable=True)
+    state = Column(String(255), nullable=True)
+    zip_code = Column(String(20), unique=True, nullable=True)

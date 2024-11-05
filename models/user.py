@@ -1,16 +1,28 @@
 # models/user.py
-from models.address import Address 
-class User:
-    def __init__(self, id, name, email):
-        self.id = id
-        self.name = name
-        self.email = email
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
+from .address import Address, Base
 
-from pydantic import BaseModel, EmailStr, Field
+class User(Base):
+    __tablename__ = 'users'  # o nome da tabela no banco de dados
 
-class UserModel(BaseModel):
-    id: int  # Adicione este campo
-    name: str = Field(..., min_length=1, max_length=100, description="O nome é obrigatório e não pode exceder 100 caracteres.")
-    email: EmailStr = Field(..., description="O email é obrigatório e deve ser válido.")
-    password: str = Field(..., min_length=6, max_length=100, description="A senha é obrigatória e deve ter entre 6 e 100 caracteres.")
-    address: Address 
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=True)
+    email = Column(String(255), unique=True, nullable=True)
+    address_id = Column(Integer, ForeignKey('addresses.id'))  # chave estrangeira para Address
+
+    address = relationship("Address", backref="users")  # relacionamento com o modelo Address
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "address": {
+                "id": self.address.id,
+                "street": self.address.street,
+                "city": self.address.city,
+                "state": self.address.state,
+                "zip_code": self.address.zip_code
+            } if self.address else None
+        }

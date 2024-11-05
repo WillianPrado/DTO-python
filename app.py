@@ -1,5 +1,3 @@
-# app.py
-
 from flask import Flask
 from controllers.user_controller import user_controller
 
