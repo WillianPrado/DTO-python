@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, delete
+from sqlalchemy.exc import IntegrityError
 from models.user import User
 from models.address import Address
 from dtos.user_dto import UserListDTO
@@ -29,26 +30,55 @@ class UserRepository:
         return user
 
     def create_user(self, user: User):
-        self.session.add(user)  # Adiciona User e Address à sessão
-        self.session.commit()  # Commit de User e Address juntos
-        self.session.refresh(user)
-        return user
+        try:
+            self.session.add(user)  # Adiciona User e Address à sessão
+            self.session.commit()  # Commit de User e Address juntos
+            self.session.refresh(user)
+            return user
+        except IntegrityError as e:
+            
+            # Verifica se o erro está relacionado a duplicidade de `zip_code`
+            if "Duplicate entry" in str(e) and "zip_code" in str(e):
+                raise ValueError("Este CEP já está cadastrado.")
+            if "Duplicate entry" in str(e) and "email" in str(e):
+                raise ValueError("Este E-mail já está cadastrado.")
+            else:
+                raise
 
-    def update_user(self, user_id, name=None, email=None, address_id=None):
-        user = self.get_user_by_id(user_id)
-        if user:
-            if name:
-                user.name = name
-            if email:
-                user.email = email
-            if address_id:
-                user.address_id = address_id
-            self.session.commit()
-        return user
+    
+    def update_user(self, user_id, user_data):
+        # Busca o usuário pelo ID
+        user = self.session.query(User).filter_by(id=user_id).one_or_none()
+        
+        if user is None:
+            return None  # Retorna None se o usuário não for encontrado
+        
+        # Atualiza os campos do usuário
+        user.name = user_data.name
+        if user.password == user_data.password:
+            raise ValueError("A senha não pode ser a mesma")
+        
+        user.email = user_data.email
+        user.password = user_data.password
+        
 
+        # Atualiza os campos do endereço
+        user.address.street = user_data.address.street
+        user.address.city = user_data.address.city
+        user.address.state = user_data.address.state
+        user.address.zip_code = user_data.address.zip_code
+
+        self.session.commit()  # Commit para salvar as alterações no banco
+        self.session.refresh(user)  # Atualiza o objeto user com os dados persistidos
+        return user
+    
     def delete_user(self, user_id):
-        user = self.get_user_by_id(user_id)
-        if user:
-            self.session.delete(user)
-            self.session.commit()
-        return user
+        # Cria uma consulta para excluir o usuário pelo ID
+        stmt = delete(User).where(User.id == user_id)
+        result = self.session.execute(stmt)
+        
+        # Confirma a transação para aplicar a exclusão
+        self.session.commit()
+        
+        # Verifica se alguma linha foi afetada (ou seja, se o usuário existia)
+        return result.rowcount > 0
